@@ -1,0 +1,71 @@
+// Zucchero sintattico: i quattro costrutti, uno per sezione.
+
+// ------------------------------------------------ 1. incremento e decremento, pre e post
+// Semantica di Java: la forma postfissa restituisce il valore PRIMA della modifica,
+// quella prefissa il valore DOPO. Le parti interpolate sono valutate da sinistra a destra.
+
+int i = 5;
+print "i vale ${i}";
+print "i++ vale ${i++}, e adesso i vale ${i}";
+print "++i vale ${++i}, e adesso i vale ${i}";
+print "i-- vale ${i--}, e adesso i vale ${i}";
+print "--i vale ${--i}, e adesso i vale ${i}";
+
+// funzionano anche sugli elementi di un array
+int[] v = [10, 20];
+v[0]++;
+++v[1];
+print "array dopo i crementi: ${v}";
+print "";
+
+// ------------------------------------------------ 2. assegnamenti composti
+// 'x op= e' e' definito come 'x = x op e', regole di conversione comprese.
+
+int n = 10;
+n += 5;  print "n += 5  ->  ${n}";
+n -= 3;  print "n -= 3  ->  ${n}";
+n *= 2;  print "n *= 2  ->  ${n}";
+n /= 4;  print "n /= 4  ->  ${n}";
+n %= 4;  print "n %= 4  ->  ${n}";
+
+dec d = 10.0;
+d /= 4;
+print "su dec la divisione non tronca:  d /= 4  ->  ${d}";
+
+string s = "CI";
+s += "NT";
+print "anche la concatenazione:  s += \"NT\"  ->  ${s}";
+print "";
+
+// ------------------------------------------------ 3. operatore ternario
+// Associativo a destra, quindi si incatena senza parentesi.
+
+// Nota: dentro ${...} non si possono annidare stringhe fra doppi apici, perche' chiuderebbero
+// il letterale esterno. Qui il ternario sta quindi fuori dall'interpolazione, concatenato con '+'.
+int voto = 27;
+print "voto ${voto}: " + (voto >= 28 ? "ottimo" : "non ottimo");
+
+int a = 7;
+int b = 12;
+print "il massimo fra ${a} e ${b} e' ${a > b ? a : b}";
+
+// il ternario e' un'espressione, quindi si annida ovunque
+int[] numeri = [3, 8, 1, 9, 4];
+int massimo = numeri[0];
+int k = 1;
+while (k < len(numeri)) {
+    massimo = numeri[k] > massimo ? numeri[k] : massimo;
+    k++
+}
+print "massimo di ${numeri} = ${massimo}";
+print "";
+
+// ------------------------------------------------ 4. interpolazione di stringhe
+// Dentro ${...} sta una qualunque espressione, di qualunque tipo.
+
+dec prezzo = 12.5;
+int quantita = 3;
+print "Totale: ${prezzo * (dec) quantita} euro per ${quantita} pezzi";
+print "Confronto: ${quantita} pezzi sono ${quantita > 2 ? 'M' : 'P'}";
+print "Espressione annidata: ${numeri[quantita - 1]}";
+print "Un dollaro letterale si scrive con la barra: \${non interpolato}"

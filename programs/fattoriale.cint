@@ -1,0 +1,23 @@
+// Fattoriale nelle due versioni, ricorsiva e iterativa.
+// Mostra: funzioni con valore di ritorno, ricorsione, ciclo, assegnamento composto, interpolazione.
+
+int fattorialeRicorsivo(int n) {
+    if (n <= 1) { return 1 }
+    return n * fattorialeRicorsivo(n - 1)
+}
+
+int fattorialeIterativo(int n) {
+    int risultato = 1;
+    int i = 2;
+    while (i <= n) {
+        risultato *= i;
+        i++
+    }
+    return risultato
+}
+
+int n = 0;
+while (n <= 10) {
+    print "${n}! = ${fattorialeRicorsivo(n)}  (iterativo: ${fattorialeIterativo(n)})";
+    n++
+}

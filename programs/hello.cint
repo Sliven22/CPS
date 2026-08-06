@@ -1,0 +1,5 @@
+// Il programma minimo di CINT.
+//
+//   java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/hello.cint
+
+print "Hello, CINT!"

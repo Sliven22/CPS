@@ -1,0 +1,38 @@
+// Crivello di Eratostene.
+// Mostra: array di bool a dimensione decisa a runtime, cicli annidati, funzione che restituisce
+// un array, accumulo su stringa con assegnamento composto.
+
+bool[] crivello(int limite) {
+    bool[] composto = new bool[limite + 1];
+
+    int p = 2;
+    while (p * p <= limite) {
+        if (!composto[p]) {
+            int multiplo = p * p;
+            while (multiplo <= limite) {
+                composto[multiplo] = true;
+                multiplo += p
+            }
+        }
+        p++
+    }
+
+    return composto
+}
+
+int limite = 100;
+bool[] composto = crivello(limite);
+
+string elenco = "";
+int quanti = 0;
+int n = 2;
+while (n <= limite) {
+    if (!composto[n]) {
+        elenco += toStr(n) + " ";
+        quanti++
+    }
+    n++
+}
+
+print "ci sono ${quanti} numeri primi fino a ${limite}:";
+print elenco
