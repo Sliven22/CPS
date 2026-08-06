@@ -31,7 +31,7 @@ dal plugin Maven, quindi non è necessario installare ANTLR separatamente.
 Entrare nella directory principale del progetto:
 
 ```bash
-cd /Users/albertodosso/IdeaProjects/Project
+cd ~/Project
 ```
 
 Se il progetto è stato copiato in un'altra posizione, usare il percorso della nuova directory.
