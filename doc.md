@@ -1,4 +1,4 @@
-# CINT
+# CPS
 
 *Laboratorio di Linguaggi — A.A. 2025/2026*
 
@@ -6,13 +6,13 @@
 
 ## Introduzione
 
-**CINT** è un linguaggio di programmazione imperativo, **tipizzato staticamente**, general-purpose,
-con una sintassi di impronta C. Un programma CINT è composto da una sezione dichiarativa di funzioni,
-non eseguibile, seguita da un comando principale.
+**CPS — C-Like Pseudocode Script** è un linguaggio di programmazione imperativo, **tipizzato
+staticamente**, general-purpose, con una sintassi pseudocodice di impronta C. Le dichiarazioni di
+funzione sono non eseguibili e possono essere intercalate alle istruzioni dello script.
 
 Le caratteristiche principali sono:
 
-- cinque tipi primitivi — `int`, `dec`, `char`, `bool`, `string` — più gli **array**, definiti per
+- cinque tipi primitivi — `int`, `real`, `char`, `bool`, `string` — più gli **array**, definiti per
   ricorsione sul tipo degli elementi e quindi multidimensionali senza casi speciali;
 - **controllo dei tipi statico e completo**: un programma che contiene un errore di tipo non viene
   eseguito affatto, nemmeno nella parte corretta che precede l'errore;
@@ -35,7 +35,7 @@ sono state implementate **quattro**, fra cui una di complessità media.
 
 ### Contesto d'applicazione
 
-CINT nasce come linguaggio **didattico per l'insegnamento della programmazione imperativa**: un
+CPS nasce come linguaggio **didattico per l'insegnamento della programmazione imperativa**: un
 sottoinsieme di C ridotto all'essenziale, ma con tre scelte pensate per rendere visibili concetti che
 in C restano impliciti o pericolosi.
 
@@ -67,7 +67,7 @@ automaticamente alla prima compilazione.
 
 ### Generare l'interprete
 
-Il plugin `antlr4-maven-plugin` genera lexer, parser e visitor a partire da `CINT.g4` durante la fase
+Il plugin `antlr4-maven-plugin` genera lexer, parser e visitor a partire da `CPS.g4` durante la fase
 `generate-sources`; il plugin `maven-assembly-plugin` produce un jar eseguibile autocontenuto.
 
 ```
@@ -77,15 +77,15 @@ mvn clean package
 
 Al termine si trovano in `target/`:
 
-- `CINT-1.0-SNAPSHOT.jar` — solo le classi dell'interprete;
-- `CINT-1.0-SNAPSHOT-jar-with-dependencies.jar` — jar eseguibile, runtime ANTLR incluso.
+- `CPS-1.0-SNAPSHOT.jar` — solo le classi dell'interprete;
+- `CPS-1.0-SNAPSHOT-jar-with-dependencies.jar` — jar eseguibile, runtime ANTLR incluso.
 
 I sorgenti generati da ANTLR finiscono in `target/generated-sources/antlr4`.
 
 ### Eseguire un programma
 
 ```
-java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/hello.cint
+java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar programs/hello.cps
 ```
 
 L'interprete accetta esattamente un argomento, il percorso di un file sorgente. I codici di uscita
@@ -101,29 +101,29 @@ distinguono il tipo di problema:
 
 ### Hello world
 
-`programs/hello.cint`:
+`programs/hello.cps`:
 
 ```
-print "Hello, CINT!"
+print "Hello, CPS!";
 ```
 
 ```
-$ java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/hello.cint
-Hello, CINT!
+$ java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar programs/hello.cps
+Hello, CPS!
 ```
 
-Un secondo esempio, che mostra tipi, ciclo, funzione e interpolazione:
+Un secondo esempio, che mostra tipi, ciclo, funzione e concatenazione nelle stampe:
 
 ```
-int quadrato(int n) {
-    return n * n
-}
+function quadrato(int n) -> int:
+    return n * n;
+end
 
 int i = 1;
-while (i <= 5) {
-    print "il quadrato di ${i} e' ${quadrato(i)}";
-    i++
-}
+while (i <= 5) do:
+    print "il quadrato di " + i + " e' " + quadrato(i);
+    i++;
+end
 ```
 
 ### Struttura della consegna
@@ -134,12 +134,12 @@ Project/
 ├── pom.xml                            build Maven
 ├── programs/                          programmi d'esempio
 └── src/main/
-    ├── antlr4/it/univr/cint/CINT.g4   grammatica ANTLR del linguaggio
-    └── java/it/univr/cint/            sorgenti Java dell'interprete
+    ├── antlr4/it/univr/cps/CPS.g4   grammatica ANTLR del linguaggio
+    └── java/it/univr/cps/            sorgenti Java dell'interprete
 ```
 
 Il progetto segue il layout Maven standard: i sorgenti Java stanno in `src/main/java` e la grammatica
-in `src/main/antlr4`, sotto la cartella corrispondente al package `it.univr.cint`. Il `pom.xml` non ha
+in `src/main/antlr4`, sotto la cartella corrispondente al package `it.univr.cps`. Il `pom.xml` non ha
 quindi bisogno di alcuna personalizzazione dei percorsi: ANTLR ricava il package dalla posizione del
 file `.g4` e genera lexer, parser e visitor già nel package giusto.
 
@@ -147,27 +147,29 @@ file `.g4` e genera lexer, parser e visitor già nel package giusto.
 
 ## Sintassi
 
-Il riferimento completo è `CINT.g4`. Quanto segue ne è la lettura discorsiva.
+Il riferimento completo è `CPS.g4`. Quanto segue ne è la lettura discorsiva.
 
 ### Struttura di un programma
 
 ```
-program : funDecl* com EOF ;
+program : com EOF ;
+com     : funDecl com? | simpleCom ... | closedCom ... ;
 ```
 
-Le funzioni stanno tutte all'inizio, in una **sezione dichiarativa non eseguibile**; segue il comando
-principale, che è l'unica cosa che viene eseguita.
+Le dichiarazioni `function ... -> ...: ... end` sono **non eseguibili** e possono comparire anche
+dopo istruzioni già presenti nello script. Le funzioni vengono raccolte in una passata preliminare;
+il comando principale esegue invece tutte le altre istruzioni nell'ordine in cui compaiono.
 
 ### Tipi di dato
 
 | Tipo | Valori | Letterali |
 |---|---|---|
 | `int` | interi con segno a 32 bit | `0`, `42`, `1000` |
-| `dec` | numeri in virgola mobile a 64 bit | `3.14`, `0.5`, `2.0` |
+| `real` | numeri in virgola mobile a 64 bit | `3.14`, `0.5`, `2.0` |
 | `char` | un carattere | `'a'`, `'Z'`, `'\n'` |
 | `bool` | valori di verità | `true`, `false` |
 | `string` | sequenze di caratteri | `"ciao"`, `"con ${interpolazione}"` |
-| `T[]` | array di `T`, con `T` a sua volta un tipo array | `[1, 2, 3]`, `new int[n]` |
+| `array T` | array di `T`, anche multidimensionale | `[1, 2, 3]`, `array int valori[3]` |
 
 I letterali numerici sono **senza segno**: il meno unario è un operatore. È una differenza rispetto a
 una grammatica in cui `INT` includa il segno, dove `3-2` verrebbe lessicalizzato come i due token
@@ -182,14 +184,15 @@ assegnamento definito.
 
 ```
 int x = 5;                            dichiarazione, con o senza inizializzatore
+array int valori[3];                  array con dimensione
 lazy int y = costoso();               dichiarazione pigra
 x = 7;                                assegnamento
 x += 2;   x++;   --x;                 assegnamento composto e crementi
-if (c) { ... }                        condizionale
-if (c) { ... } else { ... }
-while (c) { ... }                     iterazione
-{ ... }                               blocco autonomo, con proprio scope
-try { ... } catch (e) { ... }         gestione degli errori runtime
+if (c): ... else: ... end             condizionale
+while (c) do: ... end                 iterazione
+do: ... while (c);                    iterazione con test finale
+for int x in valori do: ... end       iterazione su array
+try: ... catch (e): ... end            gestione degli errori runtime
 throw "messaggio";                    sollevamento di un errore
 return e;                             uscita da una funzione
 print e;                              stampa
@@ -206,21 +209,24 @@ I comandi si dividono in due specie, e la regola del `;` dipende da quale delle 
 | Specie | Comandi | Separazione dal comando successivo |
 |---|---|---|
 | **semplici** | dichiarazione, assegnamento, crementi, `throw`, `return`, `print`, chiamata, `nop` | `;` obbligatorio |
-| **chiusi da graffa** | `if`, `if/else`, `while`, `try/catch`, blocco `{ ... }` | nessun `;`: la `}` chiude già il comando |
+| **strutturati chiusi da `end`** | `if`, `if/else`, `while`, `for`, `try/catch` | nessun `;` dopo `end` |
+| **`do/while`** | `do: ... while (c);` | il `;` finale fa parte del costrutto |
 
-È la stessa regola del C: dopo una parentesi graffa chiusa non si scrive nulla.
+Nei costrutti strutturati CPS `:` apre il corpo. `end` chiude `if`, `while`, `for` e `try/catch`;
+`do` viene invece chiuso da `while (condizione);`. Prima di `end` si può omettere il `;` dell'ultimo
+comando semplice.
 
 ```
 int i = 0;                  // comando semplice: ';' prima del prossimo
-while (i < 3) {
+while (i < 3) do:
     print i;                // semplice: ';'
     i++                     // ultimo del blocco: niente ';'
-}                           // chiuso da graffa: niente ';'
-print "fatto"
+end                         // chiuso da end: niente ';'
+print "fatto";
 ```
 
-Il `;` dopo una `}` resta comunque **ammesso** e non ha effetto — vale come il comando vuoto del C —
-così che lo stile `if (c) { ... };` continui a essere valido.
+La grammatica CPS non usa parentesi graffe per i blocchi: usa `:` con `end`, oppure il `while` finale
+nel caso di `do/while`.
 
 ### Espressioni
 
@@ -234,9 +240,9 @@ In ordine di precedenza decrescente:
 | moltiplicativi | `*`, `/`, `%` |
 | additivi | `+`, `-` |
 | relazionali | `<`, `<=`, `>=`, `>` |
-| uguaglianza | `==`, `!=` |
-| congiunzione | `&&` |
-| disgiunzione | `\|\|` |
+| uguaglianza | `==`, `!=`, `equals` |
+| congiunzione | `&&`, `and` |
+| disgiunzione | `\|\|`, `or` |
 | condizionale | `c ? e1 : e2` (associativo a destra) |
 
 L'operatore `+` è sovraccarico: fra numeri è l'addizione, mentre se almeno uno dei due operandi è una
@@ -255,11 +261,9 @@ L'operatore `+` è sovraccarico: fra numeri è l'addizione, mentre se almeno uno
 1. **Niente stringhe fra doppi apici dentro `${...}`.** Il lexer chiude il letterale al primo `"`
    incontrato, quindi `"${b ? "sì" : "no"}"` non è valido. Si aggira portando il ternario fuori
    dall'interpolazione (`"..." + (b ? "sì" : "no")`) oppure usando letterali `char`.
-2. **Nessun ciclo `for`.** Con il punto e virgola come separatore, la forma `for (init; cond; passo)`
-   entrerebbe in conflitto con la regola di sequenza. Il `while` con `++` e `+=` copre gli stessi usi.
-3. **Nessun `break` o `continue`.** Appartengono alle funzionalità avanzate di controllo del flusso,
+2. **Nessun `break` o `continue`.** Appartengono alle funzionalità avanzate di controllo del flusso,
    che non sono fra quelle scelte.
-4. **Al massimo un `;` superfluo.** Un `;` in più è tollerato dopo un comando — sia prima di `}` sia a
+3. **Al massimo un `;` superfluo.** Un `;` in più è tollerato dopo un comando — sia prima di `end` sia a
    fine programma — ma due di seguito (`;;`) sono un errore di sintassi: non esiste un comando vuoto,
    il posto del comando che non fa niente è preso da `nop`.
 
@@ -281,30 +285,31 @@ L'operatore `+` è sovraccarico: fra numeri è l'addizione, mentre se almeno uno
 
 ### Gerarchia dei tipi e strategia di conversione
 
-La relazione di sottotipaggio di CINT è volutamente minimale. L'unica coppia in relazione è
+La relazione di sottotipaggio di CPS è volutamente minimale. L'unica coppia in relazione è
 
-$$\texttt{int} \;\le\; \texttt{dec}$$
+$$\texttt{int} \;\leftrightarrow\; \texttt{real}$$
 
-e la relazione è riflessiva ma non coinvolge nessun altro tipo: `char`, `bool`, `string` e gli array
-sono fra loro incomparabili.
+e le conversioni fra i due tipi sono implicite; `char`, `bool`, `string` e gli array sono fra loro
+incomparabili.
 
-Gli **array sono invarianti**: `dec[]` non accetta un `int[]`, benché `dec` accetti `int`. La
+Gli **array sono invarianti**: `array real` non accetta un `array int`, benché i valori numerici siano
+convertibili. La
 covarianza renderebbe il sistema insicuro, perché gli array sono modificabili — attraverso un
-riferimento di tipo `dec[]` si potrebbe scrivere un `dec` dentro un array che in realtà contiene
+riferimento di tipo `array real` si potrebbe scrivere un `real` dentro un array che in realtà contiene
 `int`.
 
-La **conversione implicita** (upcast `int` → `dec`) avviene in un solo tipo di posizione: quando un
+La **conversione implicita** (`int` ↔ `real`) avviene quando un
 valore viene *riposto* da qualche parte. Cioè in una dichiarazione con inizializzatore, in un
 assegnamento, nel legame di un parametro per valore e nel valore di ritorno. Concentrare la
 conversione nei punti di scrittura evita di doverla replicare in ogni operatore.
 
 La **conversione esplicita** — il cast `(T) e` — è ammessa solo all'interno del gruppo
-`int`/`dec`/`char`, cioè fra i tipi che condividono una rappresentazione numerica. `(int) 3.9` tronca,
+`int`/`real`/`char`, cioè fra i tipi che condividono una rappresentazione numerica. `(int) 3.9` tronca,
 `(int) 'A'` dà `65`, `(char) 66` dà `'B'`. Il cast di una `string` o di un `bool` è un errore statico;
 per ottenere la rappresentazione testuale di un valore qualunque si usa `toStr`.
 
-Nelle operazioni aritmetiche il tipo del risultato è il **join** dei due operandi: `dec` se almeno uno
-dei due è `dec`, altrimenti `int`. Ne consegue che `5 / 2` vale `2`, mentre `(dec) 5 / 2` vale `2.5`.
+Nelle operazioni aritmetiche il tipo del risultato è il **join** dei due operandi: `real` se almeno uno
+dei due è `real`, altrimenti `int`. Ne consegue che `5 / 2` vale `2`, mentre `(real) 5 / 2` vale `2.5`.
 
 Un esempio di regola di tipo, per la dichiarazione con inizializzatore, in cui si legge sia il
 controllo di sottotipaggio sia l'estensione dell'ambiente:
@@ -328,7 +333,7 @@ Notazione:
 - $\mathrm{push}(\sigma)$ e $\mathrm{pop}(\sigma)$ entrano ed escono da un blocco;
 - $\iota_\tau(v)$ è la conversione implicita in scrittura verso il tipo $\tau$;
 - $\langle c,\sigma\rangle \Downarrow \sigma'$ per i comandi, $\langle e,\sigma\rangle \Downarrow \langle v,\sigma'\rangle$
-  per le espressioni — che in CINT possono avere effetti collaterali, a causa di `++`, delle chiamate
+  per le espressioni — che in CPS possono avere effetti collaterali, a causa di `++`, delle chiamate
   e del forzamento delle celle pigre.
 
 **Sequenza e assegnamento.**
@@ -341,13 +346,13 @@ $$\textsc{Assign}\quad\frac{\langle e,\sigma\rangle \Downarrow \langle v,\sigma'
 all'uscita, quindi le dichiarazioni interne non sopravvivono al blocco, mentre le modifiche alle
 celle esterne sì — perché quelle celle appartengono a frame che non vengono scartati.
 
-$$\textsc{Block}\quad\frac{\langle c,\ \mathrm{push}(\sigma)\rangle \Downarrow \sigma'}{\langle \{\,c\,\},\ \sigma\rangle \Downarrow \mathrm{pop}(\sigma')}$$
+$$\textsc{Block}\quad\frac{\langle c,\ \mathrm{push}(\sigma)\rangle \Downarrow \sigma'}{\langle \texttt{:}\ c\ \texttt{end},\ \sigma\rangle \Downarrow \mathrm{pop}(\sigma')}$$
 
 **Iterazione.**
 
-$$\textsc{While}_{\bot}\quad\frac{\langle e,\sigma\rangle \Downarrow \langle \mathbf{false},\sigma'\rangle}{\langle \texttt{while}\,(e)\,\{c\},\ \sigma\rangle \Downarrow \sigma'}$$
+$$\textsc{While}_{\bot}\quad\frac{\langle e,\sigma\rangle \Downarrow \langle \mathbf{false},\sigma'\rangle}{\langle \texttt{while}\,(e)\ \texttt{do:}\ c\ \texttt{end},\ \sigma\rangle \Downarrow \sigma'}$$
 
-$$\textsc{While}_{\top}\quad\frac{\langle e,\sigma\rangle \Downarrow \langle \mathbf{true},\sigma'\rangle \qquad \langle \{c\},\sigma'\rangle \Downarrow \sigma'' \qquad \langle \texttt{while}\,(e)\,\{c\},\sigma''\rangle \Downarrow \sigma'''}{\langle \texttt{while}\,(e)\,\{c\},\ \sigma\rangle \Downarrow \sigma'''}$$
+$$\textsc{While}_{\top}\quad\frac{\langle e,\sigma\rangle \Downarrow \langle \mathbf{true},\sigma'\rangle \qquad \langle \texttt{:}\ c\ \texttt{end},\sigma'\rangle \Downarrow \sigma'' \qquad \langle \texttt{while}\,(e)\ \texttt{do:}\ c\ \texttt{end},\sigma''\rangle \Downarrow \sigma'''}{\langle \texttt{while}\,(e)\ \texttt{do:}\ c\ \texttt{end},\ \sigma\rangle \Downarrow \sigma'''}$$
 
 **Corto circuito.** La congiunzione ha due regole, e in una di esse $e_2$ semplicemente non compare
 fra le premesse: è questo che significa non valutarla.
@@ -380,9 +385,9 @@ attraverso ogni costrutto, finché non incontra un `try`.
 
 $$\textsc{DivZero}\quad\frac{\langle e_1,\sigma\rangle \Downarrow \langle v_1,\sigma'\rangle \qquad \langle e_2,\sigma'\rangle \Downarrow \langle 0,\sigma''\rangle}{\langle e_1 / e_2,\ \sigma\rangle \Downarrow \mathbf{err}(\texttt{"divisione per zero"})}$$
 
-$$\textsc{Try}_{ok}\quad\frac{\langle \{c_1\},\sigma\rangle \Downarrow \sigma'}{\langle \texttt{try}\,\{c_1\}\,\texttt{catch}\,(x)\,\{c_2\},\ \sigma\rangle \Downarrow \sigma'}$$
+$$\textsc{Try}_{ok}\quad\frac{\langle \texttt{:}\ c_1\ \texttt{catch}\,(x):\ c_2\ \texttt{end},\sigma\rangle \Downarrow \sigma'}{\langle \texttt{try:}\ c_1\ \texttt{catch}\,(x):\ c_2\ \texttt{end},\ \sigma\rangle \Downarrow \sigma'}$$
 
-$$\textsc{Try}_{err}\quad\frac{\langle \{c_1\},\sigma\rangle \Downarrow \mathbf{err}(m) \qquad \langle \{c_2\},\ \mathrm{push}(\sigma)[\,x \mapsto \mathrm{cella}(\texttt{string},\, m)\,]\rangle \Downarrow \sigma'}{\langle \texttt{try}\,\{c_1\}\,\texttt{catch}\,(x)\,\{c_2\},\ \sigma\rangle \Downarrow \mathrm{pop}(\sigma')}$$
+$$\textsc{Try}_{err}\quad\frac{\langle c_1,\sigma\rangle \Downarrow \mathbf{err}(m) \qquad \langle c_2,\ \mathrm{push}(\sigma)[\,x \mapsto \mathrm{cella}(\texttt{string},\, m)\,]\rangle \Downarrow \sigma'}{\langle \texttt{try:}\ c_1\ \texttt{catch}\,(x):\ c_2\ \texttt{end},\ \sigma\rangle \Downarrow \mathrm{pop}(\sigma')}$$
 
 Si noti che nella seconda regola l'ambiente da cui riparte il gestore è $\sigma$, quello di *prima*
 del blocco protetto: le dichiarazioni fatte nel `try` prima dell'errore non sono visibili al `catch`.
@@ -419,16 +424,16 @@ l'unico punto in cui una modifica successiva alla cattura risulta osservabile al
 ## Implementazione
 
 L'interprete è scritto in Java 25 e usa il pattern **visitor** generato da ANTLR (`-visitor`, senza
-listener). L'elaborazione attraversa quattro fasi nettamente separate, orchestrate da `MainCINT`:
+listener). L'elaborazione attraversa quattro fasi nettamente separate, orchestrate da `MainCPS`:
 
 ```
 sorgente  →  lexer + parser  →  raccolta firme  →  type system  →  interprete
-             CINT.g4            FunctionTable      CINTTypeSystem   CINTInterpreter
+             CPS.g4            FunctionTable      CPSTypeSystem   CPSInterpreter
 ```
 
 ### I due visitor
 
-`CINTTypeSystem extends CINTBaseVisitor<Type>` e `CINTInterpreter extends CINTBaseVisitor<Value>`
+`CPSTypeSystem extends CPSBaseVisitor<Type>` e `CPSInterpreter extends CPSBaseVisitor<Value>`
 percorrono lo stesso albero con lo stesso schema, restituendo l'uno un tipo e l'altro un valore. La
 separazione paga due volte: l'interprete non ripete alcun controllo di tipo — può assumere che ogni
 operando sia del tipo giusto e limitarsi a un cast — e un programma mal tipato non produce output
@@ -474,7 +479,7 @@ inizi. Il programma `smoke` con `even`/`odd` è il caso di prova.
 **Uscita anticipata con il pattern visitor.** Un visitor restituisce un valore per ogni nodo e non ha
 modo di interrompere una visita a metà, ma `return` deve saltare fuori da blocchi e cicli annidati.
 La soluzione idiomatica è un'eccezione di controllo, `ReturnSignal`, costruita con stack trace
-disabilitato perché non è un errore ma un salto. Lo stesso meccanismo, con `CINTRuntimeError`,
+disabilitato perché non è un errore ma un salto. Lo stesso meccanismo, con `CPSRuntimeError`,
 implementa la propagazione degli errori fino al `try` più vicino.
 
 **Allineamento dell'ambiente in presenza di salti.** Con `return` ed errori che attraversano i
@@ -483,14 +488,13 @@ un blocco è quindi racchiuso in un `try/finally` che ripristina l'ambiente qual
 dentro — è il motivo per cui, dopo un errore intercettato, l'esecuzione riprende nell'ambiente giusto.
 
 **Interpolazione senza lexer mode.** La soluzione idiomatica in ANTLR sarebbe un *mode* dedicato,
-attivato da `${` e chiuso dalla graffa corrispondente. Il problema è che quella graffa è lo stesso
-carattere che chiude i blocchi di codice: distinguere la chiusura dell'interpolazione da una graffa
-annidata al suo interno richiederebbe un contatore di profondità gestito da **azioni lessicali**, cioè
-codice Java scritto dentro il `.g4`, che legherebbe la grammatica al linguaggio di implementazione.
+attivato da `${` e chiuso dalla graffa corrispondente. Gestire correttamente le graffe annidate
+richiederebbe un contatore di profondità tramite **azioni lessicali**, cioè codice Java scritto dentro
+il `.g4`, che legherebbe la grammatica al linguaggio di implementazione.
 
 Si è preferito tenere la grammatica pulita: il lexer emette un unico token `STRING` e la scomposizione
 avviene in `StringInterpolation`, che scandisce il testo tenendo conto degli escape, individua la
-graffa di chiusura contando l'annidamento, e ricompila ogni frammento con un parser CINT usa e getta.
+graffa di chiusura contando l'annidamento, e ricompila ogni frammento con un parser CPS usa e getta.
 Il risultato è messo in cache sul testo del token, altrimenti una stringa interpolata dentro un ciclo
 verrebbe riparsata a ogni iterazione. I due costi di questa scelta sono dichiarati: le posizioni degli
 errori dentro un frammento sono relative al frammento, e non si possono annidare stringhe fra doppi
@@ -511,26 +515,26 @@ unica.
 
 **Aritmetica intera davvero intera.** Calcolare tutto in `double` e riconvertire, come è naturale
 fare in una prima versione, perde precisione sugli interi grandi e soprattutto nasconde la divisione
-per zero dietro a un `Infinity` silenzioso. In CINT, se entrambi gli operandi sono `IntValue` il conto
+per zero dietro a un `Infinity` silenzioso. In CPS, se entrambi gli operandi sono `IntValue` il conto
 si fa fra `int`, e la divisione per zero è un controllo esplicito.
 
 **Cicli e ricorsione senza esaurire la pila.** `visitWhile` è un ciclo Java, non una chiamata
 ricorsiva: la profondità della pila non deve dipendere dal numero di iterazioni. Per la ricorsione
 *del programma interpretato*, che la pila la consuma per forza, un contatore `MAX_CALL_DEPTH` la
-interrompe a 1000 chiamate annidate trasformandola in un errore CINT catturabile, invece di lasciarla
+interrompe a 1000 chiamate annidate trasformandola in un errore CPS catturabile, invece di lasciarla
 degenerare in uno `StackOverflowError` della JVM, che non lo sarebbe.
 
 **Errori di sintassi silenziosi.** Il listener di default di ANTLR stampa l'errore e prosegue con il
-recupero, consegnando al type system un albero rattoppato. `CINTErrorListener` lo sostituisce su lexer
+recupero, consegnando al type system un albero rattoppato. `CPSErrorListener` lo sostituisce su lexer
 e parser e interrompe subito l'analisi.
 
 ### Mappa dei sorgenti
 
 | File | Ruolo |
 |---|---|
-| `MainCINT.java` | orchestrazione delle quattro fasi, codici di uscita |
-| `CINTTypeSystem.java` | controllo statico dei tipi e delle dichiarazioni |
-| `CINTInterpreter.java` | valutazione |
+| `MainCPS.java` | orchestrazione delle quattro fasi, codici di uscita |
+| `CPSTypeSystem.java` | controllo statico dei tipi e delle dichiarazioni |
+| `CPSInterpreter.java` | valutazione |
 | `env/Scope.java` | catena di scope, parametrica |
 | `env/Cell.java` | cella modificabile: riferimenti, elementi di array, sospensioni |
 | `env/FunctionTable.java` | passata preliminare e firme delle funzioni |
@@ -548,21 +552,21 @@ e parser e interrompe subito l'analisi.
 I nove programmi in `programs/` si eseguono con
 
 ```
-java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/<nome>.cint
+java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar programs/<nome>.cps
 ```
 
-### `hello.cint`
+### `hello.cps`
 
 Il programma minimo.
 
 ```
-Hello, CINT!
+Hello, CPS!
 ```
 
-### `fattoriale.cint`
+### `fattoriale.cps`
 
 Fattoriale ricorsivo e iterativo a confronto. Mostra funzioni con valore di ritorno, ricorsione,
-ciclo, assegnamento composto e interpolazione.
+ciclo, assegnamento composto e stampe composte con `+`.
 
 ```
 0! = 1  (iterativo: 1)
@@ -578,9 +582,9 @@ ciclo, assegnamento composto e interpolazione.
 10! = 3628800  (iterativo: 3628800)
 ```
 
-### `fibonacci.cint`
+### `fibonacci.cps`
 
-Ricorsione pura e ricorsione con tabella di memoizzazione. La tabella è un `int[]` passato alle
+Ricorsione pura e ricorsione con tabella di memoizzazione. La tabella è un `array int` passato alle
 chiamate annidate: essendo un riferimento, quella riempita in profondità è la stessa che vede il
 chiamante — verificato dall'ultima riga, che la interroga dopo il ritorno.
 
@@ -605,7 +609,7 @@ fib(40) con memoizzazione = 102334155
 la tabella e' stata riempita dalle chiamate annidate: fib(20) = 6765
 ```
 
-### `primi.cint`
+### `primi.cps`
 
 Crivello di Eratostene: array di `bool` con dimensione decisa a runtime, cicli annidati, funzione che
 restituisce un array, accumulo su stringa con `+=`.
@@ -615,7 +619,7 @@ ci sono 25 numeri primi fino a 100:
 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 
 ```
 
-### `bubblesort.cint`
+### `bubblesort.cps`
 
 Ordinamento sul posto. Mette a confronto le due modalità di passaggio: `scambia` riceve due `int` con
 `ref`, `bubbleSort` riceve un array, che è già un riferimento. Le ultime righe sono la controprova
@@ -629,10 +633,10 @@ x=1 y=2
 dopo scambia(x, y): x=2 y=1
 ```
 
-### `matrice.cint`
+### `matrice.cps`
 
 Prodotto di matrici, con array multidimensionali sia in forma letterale sia allocati con
-`new int[righe][colonne]`.
+`array array int c[righe][colonne]`.
 
 ```
 A =
@@ -647,12 +651,12 @@ A x B =
   [139, 154]
 ```
 
-### `lazy.cint`
+### `lazy.cps`
 
 Le cinque proprietà della valutazione pigra, una per sezione: cattura per valore (`x` vale `7` benché
 `y` sia stata azzerata), espressione mai forzata (`1 / 0` dichiarato senza errore), calcolo al primo
 uso e una volta sola (il messaggio di calcolo compare una volta per due usi), propagazione della
-pigrizia lungo una catena, e cattura per valore anche dentro le stringhe interpolate.
+pigrizia lungo una catena, e cattura per valore anche nelle espressioni lazy di tipo `string`.
 
 ```
 y valeva 4 alla dichiarazione e ora vale 0, ma x vale 7
@@ -672,9 +676,10 @@ forzo b: 10
 etichetta valeva 1
 ```
 
-### `zucchero.cint`
+### `zucchero.cps`
 
-I quattro costrutti dello zucchero sintattico, uno per sezione.
+Incrementi, assegnamenti composti e operatore ternario, seguiti da esempi di stampa con
+concatenazione esplicita.
 
 ```
 i vale 5
@@ -689,8 +694,8 @@ n -= 3  ->  12
 n *= 2  ->  24
 n /= 4  ->  6
 n %= 4  ->  2
-su dec la divisione non tronca:  d /= 4  ->  2.5
-anche la concatenazione:  s += "NT"  ->  CINT
+su real la divisione non tronca:  d /= 4  ->  2.5
+anche la concatenazione:  s += "PS"  ->  CPS
 
 voto 27: non ottimo
 il massimo fra 7 e 12 e' 12
@@ -699,10 +704,9 @@ massimo di [3, 8, 1, 9, 4] = 9
 Totale: 37.5 euro per 3 pezzi
 Confronto: 3 pezzi sono M
 Espressione annidata: 1
-Un dollaro letterale si scrive con la barra: ${non interpolato}
 ```
 
-### `errori.cint`
+### `errori.cps`
 
 Gestione programmatica degli errori: errori sollevati dal linguaggio e dal programma, `try` annidati
 con rilancio, e ripresa dell'esecuzione dopo la gestione.
@@ -727,11 +731,11 @@ stati verificati separatamente; una selezione, con il messaggio prodotto:
 |---|---|
 | `print pippo` | *statico* — variabile 'pippo' non dichiarata @1:6 |
 | `int x = 1; int x = 2` | *statico* — variabile 'x' gia' dichiarata in questo blocco @1:11 |
-| `int x = 3.5` | *statico* — 'x' e' di tipo int e non puo' essere inizializzata con dec @1:0 |
-| `if (1) { nop }` | *statico* — atteso bool, trovato int @1:4 |
-| `int f(int a) { if (a > 0) { return 1 } }` | *statico* — la funzione 'f' di tipo int puo' terminare senza return |
-| `void f(ref int a) {...} f(3)` | *statico* — parametro per riferimento: serve una variabile o un elemento di array |
-| `int[] a = [1]; dec[] d = a` | *statico* — 'd' e' di tipo dec[] e non puo' essere inizializzata con int[] |
+| `bool x = 3.5` | *statico* — 'x' e' di tipo bool e non puo' essere inizializzata con real @1:0 |
+| `if (1): nop end` | *statico* — atteso bool, trovato int @1:4 |
+| `function f(int a) -> int: if (a > 0): return 1; end end` | *statico* — la funzione 'f' di tipo int puo' terminare senza return |
+| `function f(ref int a) -> void: end f(3)` | *statico* — parametro per riferimento: serve una variabile o un elemento di array |
+| `array int a = [1]; array real d = a` | *statico* — 'd' e' di tipo array real e non puo' essere inizializzata con array int |
 | `print (int) "ciao"` | *statico* — non esiste conversione da string a int @1:6 |
 | `int x = ;` | *sintassi* — mismatched input ';' @1:8 |
 | `print 1 / 0` | *runtime non gestito* — divisione per zero |

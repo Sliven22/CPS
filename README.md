@@ -1,6 +1,7 @@
-# CINT
+# CPS
 
-Interprete di **CINT**, un linguaggio imperativo tipizzato staticamente con sintassi ispirata al C.
+Interprete di **CPS — C-Like Pseudocode Script**, un linguaggio imperativo tipizzato staticamente
+con sintassi pseudocodice ispirata al C.
 Il progetto è realizzato per il Laboratorio di Linguaggi (A.A. 2025/2026) e usa ANTLR per generare
 lexer, parser e visitor.
 
@@ -48,7 +49,7 @@ mvn clean package
 La compilazione esegue queste fasi principali:
 
 1. `clean` elimina la directory `target/` precedente;
-2. `generate-sources` esegue `antlr4-maven-plugin` sulla grammatica `CINT.g4`;
+2. `generate-sources` esegue `antlr4-maven-plugin` sulla grammatica `CPS.g4`;
 3. `compile` compila i sorgenti Java con JDK 25;
 4. `test` esegue gli eventuali test presenti;
 5. `package` crea i JAR e l'assembly con le dipendenze.
@@ -56,8 +57,8 @@ La compilazione esegue queste fasi principali:
 Al termine, nella directory `target/` sono disponibili:
 
 ```text
-CINT-1.0-SNAPSHOT.jar
-CINT-1.0-SNAPSHOT-jar-with-dependencies.jar
+CPS-1.0-SNAPSHOT.jar
+CPS-1.0-SNAPSHOT-jar-with-dependencies.jar
 generated-sources/antlr4/     sorgenti generati da ANTLR
 ```
 
@@ -74,45 +75,45 @@ macOS, un'installazione standard può essere avviata così:
 
 In alternativa si può eseguire il goal `package` dalla finestra Maven di IntelliJ.
 
-## Esecuzione di un programma CINT
+## Esecuzione di un programma CPS
 
-L'interprete accetta **un solo argomento**, cioè il percorso del file sorgente `.cint`:
+L'interprete accetta **un solo argomento**, cioè il percorso del file sorgente `.cps`:
 
 ```bash
-java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/hello.cint
+java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar programs/hello.cps
 ```
 
 Output:
 
 ```text
-Hello, CINT!
+Hello, CPS!
 ```
 
 Il file sorgente non viene passato tramite input standard. Per eseguire un altro esempio, sostituire
 semplicemente il percorso:
 
 ```bash
-java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/fattoriale.cint
-java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/fibonacci.cint
-java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/bubblesort.cint
-java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/matrice.cint
-java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/lazy.cint
-java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/zucchero.cint
-java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/errori.cint
+java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar programs/fattoriale.cps
+java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar programs/fibonacci.cps
+java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar programs/bubblesort.cps
+java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar programs/matrice.cps
+java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar programs/lazy.cps
+java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar programs/zucchero.cps
+java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar programs/errori.cps
 ```
 
 È possibile eseguire tutti gli esempi, uno alla volta, con:
 
 ```bash
-for file in programs/*.cint; do
+for file in programs/*.cps; do
     echo "--- $file"
-    java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar "$file"
+    java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar "$file"
 done
 ```
 
 ## Codici di uscita
 
-`MainCINT` usa codici diversi per distinguere i problemi:
+`MainCPS` usa codici diversi per distinguere i problemi:
 
 | Codice | Significato |
 |---:|---|
@@ -128,36 +129,39 @@ l'esecuzione.
 
 ## Esempio di programma
 
-Creare, per esempio, un file `esempio.cint`:
+Creare, per esempio, un file `esempio.cps`:
 
-```cint
-int quadrato(int n) {
-    return n * n
-}
+```cps
+function quadrato(int n) -> int:
+    return n * n;
+end
 
 int i = 1;
-while (i <= 5) {
-    print "il quadrato di ${i} e' ${quadrato(i)}";
-    i++
-}
+while (i <= 5) do:
+    print "il quadrato di " + i + " e' " + quadrato(i);
+    i++;
+end
 ```
 
 Eseguirlo dalla directory del progetto:
 
 ```bash
-java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar esempio.cint
+java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar esempio.cps
 ```
 
-Il punto e virgola separa i comandi semplici. L'ultimo comando di un blocco può non averlo, come
-`i++` nell'esempio.
+I blocchi CPS usano `:` e vengono chiusi da `end`; fa eccezione `do: ... while (condizione);`, che
+termina con il `while` finale. Il punto e virgola separa i comandi semplici e può essere omesso
+dall'ultimo comando prima di `end`.
 
 ## Funzionalità del linguaggio
 
-CINT supporta:
+CPS supporta:
 
-- tipi `int`, `dec`, `char`, `bool`, `string`;
+- tipi `int`, `real`, `char`, `bool`, `string`;
 - array monodimensionali e multidimensionali;
-- dichiarazioni, assegnamenti, `if`, `while`, `try`/`catch`, `throw`, `return`, `print` e `nop`;
+- dichiarazioni, assegnamenti, `if`/`else if`/`else`, `while`, `do`/`while`, `try`/`catch`, `throw`, `return`, `print` e `nop`;
+- cicli `for` su intervalli, elementi di array e con destrutturazione indice/valore;
+- operatori logici testuali `and`/`or` e uguaglianza `equals`;
 - funzioni, ricorsione, passaggio per valore e passaggio per riferimento con `ref`;
 - incrementi/decrementi prefissi e postfissi (`++`, `--`);
 - assegnamenti composti (`+=`, `-=`, `*=`, `/=`, `%=`);
@@ -169,7 +173,6 @@ CINT supporta:
 
 Limitazioni sintattiche importanti:
 
-- non esiste il ciclo `for`: usare `while`;
 - non esistono `break` e `continue`;
 - dentro `${...}` non si possono usare stringhe delimitate da doppi apici annidate;
 - il `;` è un separatore, non un terminatore obbligatorio dell'ultimo comando.
@@ -184,13 +187,13 @@ Project/
 ├── README.md
 ├── doc.md
 ├── pom.xml
-├── programs/                         programmi CINT di esempio
+├── programs/                         programmi CPS di esempio
 └── src/main/
-    ├── antlr4/it/univr/cint/CINT.g4   grammatica ANTLR
-    └── java/it/univr/cint/
-        ├── MainCINT.java              punto d'ingresso
-        ├── CINTTypeSystem.java        controllo statico
-        ├── CINTInterpreter.java       esecuzione
+    ├── antlr4/it/univr/cps/CPS.g4   grammatica ANTLR
+    └── java/it/univr/cps/
+        ├── MainCPS.java              punto d'ingresso
+        ├── CPSTypeSystem.java        controllo statico
+        ├── CPSInterpreter.java       esecuzione
         ├── env/                       scope, celle e funzioni
         ├── type/                      gerarchia dei tipi
         ├── value/                     valori runtime
@@ -199,7 +202,7 @@ Project/
         └── error/                     errori e segnali di controllo
 ```
 
-La grammatica viene modificata in `src/main/antlr4/it/univr/cint/CINT.g4`; i sorgenti generati non
+La grammatica viene modificata in `src/main/antlr4/it/univr/cps/CPS.g4`; i sorgenti generati non
 devono essere modificati a mano, perché vengono ricreati durante `mvn clean package`.
 
 ## Sviluppo e verifica
@@ -208,7 +211,7 @@ Dopo ogni modifica è consigliato eseguire:
 
 ```bash
 mvn clean package
-java -jar target/CINT-1.0-SNAPSHOT-jar-with-dependencies.jar programs/hello.cint
+java -jar target/CPS-1.0-SNAPSHOT-jar-with-dependencies.jar programs/hello.cps
 ```
 
 Per una verifica più ampia, eseguire anche i programmi presenti in `programs/`. Attualmente il
