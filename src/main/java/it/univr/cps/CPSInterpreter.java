@@ -12,6 +12,7 @@ import it.univr.cps.type.*;
 import it.univr.cps.value.*;
 
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +36,11 @@ public final class CPSInterpreter extends CPSBaseVisitor<Value> {
      * dentro un errore del linguaggio, catturabile, invece di farla degenerare in uno StackOverflowError
      * della JVM, che non lo è.
      */
+    private static final int MAX_CALL_DEPTH = 250;
+    /*
     private static final int MAX_CALL_DEPTH = 1000;
+    Risolve: Su Windows evita lo StackOverflowError della JVM in errori.cps, permettendo all'interprete di sollevare il previsto CPSRuntimeError.
+     */
 
     private final FunctionTable functions;
 
@@ -114,9 +119,9 @@ public final class CPSInterpreter extends CPSBaseVisitor<Value> {
 
         ExpValue<?> initial = ctx.exp() == null
                 ? (ctx.dimensions().isEmpty()
-                    ? TypeUtils.defaultValue(declared)
-                    : allocate(TypeUtils.fromName(ctx.type().TYPE().getText(), 0),
-                        ctx.dimensions().stream().map(d -> intValue(d.exp())).toList(), 0))
+                ? TypeUtils.defaultValue(declared)
+                : allocate(TypeUtils.fromName(ctx.type().TYPE().getText(), 0),
+                ctx.dimensions().stream().map(d -> intValue(d.exp())).toList(), 0))
                 : coerce(value(ctx.exp()), declared);
 
         scope.declare(ctx.ID().getText(), Cell.of(declared, initial));
@@ -210,6 +215,39 @@ public final class CPSInterpreter extends CPSBaseVisitor<Value> {
 
     @Override
     public Value visitIfChain(CPSParser.IfChainContext ctx) {
+        int branchIndex = 0;
+
+        for (int i = 0; i < ctx.children.size(); i++) {
+            var child = ctx.children.get(i);
+            if (child instanceof TerminalNode node
+                    && node.getSymbol().getType() == CPSParser.COLON) {
+
+                // Il corpo del blocco è il figlio immediatamente successivo al COLON (se presente)
+                CPSParser.ComContext body = null;
+                if (i + 1 < ctx.children.size()
+                        && ctx.children.get(i + 1) instanceof CPSParser.ComContext command) {
+                    body = command;
+                }
+
+                // Ramo IF o ELSE IF
+                if (branchIndex < ctx.condition().size()) {
+                    if (condition(ctx.condition(branchIndex).exp())) {
+                        if (body != null) executeComScoped(body);
+                        return ComValue.INSTANCE; // Condizione vera: esegue ed esce subito dalla catena
+                    }
+                    branchIndex++;
+                } else {
+                    // Ramo ELSE finale
+                    if (body != null) executeComScoped(body);
+                    return ComValue.INSTANCE;
+                }
+            }
+        }
+        return ComValue.INSTANCE;
+    }
+
+    /*@Override
+    public Value visitIfChain(CPSParser.IfChainContext ctx) {
         for (int i = 0; i < ctx.condition().size(); i++) {
             if (condition(ctx.condition(i).exp())) {
                 if (i < ctx.com().size()) executeComScoped(ctx.com(i));
@@ -223,7 +261,7 @@ public final class CPSInterpreter extends CPSBaseVisitor<Value> {
                 && ctx.com().size() > ctx.condition().size())
             executeComScoped(ctx.com(ctx.condition().size()));
         return ComValue.INSTANCE;
-    }
+    }*/
 
     /** Ciclo iterativo, non ricorsivo: la profondita' della pila Java non deve dipendere dai giri. */
     @Override
@@ -235,6 +273,38 @@ public final class CPSInterpreter extends CPSBaseVisitor<Value> {
     }
 
     @Override
+    public Value visitTryCatch(CPSParser.TryCatchContext ctx) {
+        CPSParser.ComContext tryBody = null;
+        CPSParser.ComContext catchBody = null;
+        int catchTokenIndex = ctx.CATCH().getSymbol().getTokenIndex();
+
+        for (CPSParser.ComContext command : ctx.com()) {
+            if (command.getStart().getTokenIndex() < catchTokenIndex) {
+                tryBody = command;
+            } else {
+                catchBody = command;
+            }
+        }
+
+        try {
+            if (tryBody != null) executeComScoped(tryBody);
+        } catch (CPSRuntimeError error) {
+            if (catchBody != null) {
+                Scope<Cell> enclosing = scope;
+                scope = scope.push();
+                try {
+                    scope.declare(ctx.ID().getText(),
+                            Cell.of(SimpleType.STRING, new StringValue(error.getMessage())));
+                    executeComScoped(catchBody);
+                } finally {
+                    scope = enclosing;
+                }
+            }
+        }
+        return ComValue.INSTANCE;
+    }
+
+    /*@Override
     public Value visitTryCatch(CPSParser.TryCatchContext ctx) {
         try {
             executeComScoped(ctx.com(0));
@@ -250,7 +320,7 @@ public final class CPSInterpreter extends CPSBaseVisitor<Value> {
             }
         }
         return ComValue.INSTANCE;
-    }
+    }*/
 
     @Override
     public Value visitForEach(CPSParser.ForEachContext ctx) {
@@ -474,6 +544,10 @@ public final class CPSInterpreter extends CPSBaseVisitor<Value> {
 
     @Override
     public Value visitArrayLit(CPSParser.ArrayLitContext ctx) {
+        if (ctx.args() == null || ctx.args().exp().isEmpty()) {
+            return new ArrayValue(SimpleType.INT, new Cell[0]);
+        }
+
         List<CPSParser.ExpContext> elements = ctx.args().exp();
 
         List<ExpValue<?>> values = new ArrayList<>(elements.size());
@@ -548,10 +622,28 @@ public final class CPSInterpreter extends CPSBaseVisitor<Value> {
         NumValue<?> base = (NumValue<?>) value(ctx.exp(0));
         NumValue<?> exponent = (NumValue<?>) value(ctx.exp(1));
 
+        if (base.asDouble() == 0.0 && exponent.asDouble() < 0) {
+            throw new CPSRuntimeError("divisione per zero (base zero con esponente negativo)");
+        }
+
+        double result = Math.pow(base.asDouble(), exponent.asDouble());
+
+        // Promuove a RealValue se l'esponente è un intero negativo (es. 2^-2 = 0.25)
+        if (bothInt(base, exponent) && ((IntValue) exponent).toValue() >= 0) {
+            return new IntValue((int) result);
+        }
+        return new RealValue(result);
+    }
+
+    /*@Override
+    public Value visitPow(CPSParser.PowContext ctx) {
+        NumValue<?> base = (NumValue<?>) value(ctx.exp(0));
+        NumValue<?> exponent = (NumValue<?>) value(ctx.exp(1));
+
         double result = Math.pow(base.asDouble(), exponent.asDouble());
 
         return bothInt(base, exponent) ? new IntValue((int) result) : new RealValue(result);
-    }
+    }*/
 
     @Override
     public Value visitPostCrement(CPSParser.PostCrementContext ctx) {
